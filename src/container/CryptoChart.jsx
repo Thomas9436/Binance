@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Line } from "react-chartjs-2";
 import "chartjs-adapter-date-fns";
+import { CryptoFilter } from "./CryptoFilter";
 import { formatISO9075 } from "date-fns";
 import {
   Chart,
@@ -26,7 +27,7 @@ Chart.register(
   TimeScale
 );
 
-export function CryptoChart() {
+export default function CryptoChart() {
   const selectedCoin = useSelector((state) => state.crypto.selectedCoin);
   const selectedDevise = useSelector((state) => state.crypto.selectedDevise);
   const tickers = useSelector((state) => state.crypto.tickers);
@@ -96,8 +97,12 @@ export function CryptoChart() {
   };
 
   return (
-    <div style={{ height: "400px", width: "750px" }}>
-      <Line data={chartData} options={options} />
+    <div>
+      <br />
+      <CryptoFilter />
+      <div style={{ height: "400px", width: "750px" }}>
+        <Line data={chartData} options={options} />
+      </div>
     </div>
   );
 }

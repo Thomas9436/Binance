@@ -1,11 +1,17 @@
 import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { setTickers } from "../redux/slices/cryptoSlice";
-import { CryptoFilter } from "./CryptoFilter";
-import { FilteredDataDisplay } from "./FilteredDataDisplay";
-import { CryptoChart } from "./CryptoChart";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+} from "@mui/material";
 
-export function Home() {
+export default function Home() {
   const dispatch = useDispatch();
   const tickers = useSelector((state) => state.crypto.tickers);
 
@@ -25,14 +31,12 @@ export function Home() {
 
     ws.onmessage = (event) => {
       const object = JSON.parse(event.data);
-      const data = object.data; // `data` est maintenant un objet unique et non un tableau
+      const data = object.data;
+      const { s: name, c: price } = data;
+      const formattedPrice = parseFloat(price).toFixed(2);
+      const timestamp = Date.now();
 
-      // Extrait les informations nécessaires directement depuis `data`
-      const { s: name, c: price } = data; // 's' pour le symbole (name) et 'c' pour le prix de clôture (price)
-      const timestamp = Date.now(); // Capture le timestamp actuel pour l'enregistrement
-
-      // Dispatche les informations en tant qu'objet dans un tableau pour garder une structure cohérente avec votre logique d'application
-      dispatch(setTickers([{ name, price, timestamp }]));
+      dispatch(setTickers([{ name, price: formattedPrice, timestamp }]));
     };
 
     return () => ws.close();
@@ -40,48 +44,62 @@ export function Home() {
 
   return (
     <div>
-      <h2>Tickers</h2>
-      <CryptoFilter />
-      <FilteredDataDisplay />
-      {Object.entries(tickers).map(([name, ticker]) => {
-        // Obtenez l'historique de prix pour la paire actuelle
-        const history = ticker.history;
-        const lastIndex = history.length - 1;
+      <TableContainer component={Paper}>
+        <Table sx={{ minWidth: 650 }} aria-label="simple table">
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell align="right">Current Price</TableCell>
+              <TableCell align="right">Change</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {Object.entries(tickers).map(([name, ticker]) => {
+              const history = ticker.history;
+              const lastIndex = history.length - 1;
+              if (lastIndex < 1) {
+                return (
+                  <TableRow key={name}>
+                    <TableCell component="th" scope="row">
+                      {name}
+                    </TableCell>
+                    <TableCell align="right">Prix indisponible</TableCell>
+                    <TableCell align="right">-</TableCell>
+                  </TableRow>
+                );
+              }
+              const tenMinutesAgoIndex = Math.max(lastIndex - 20, 0);
+              const currentPrice = parseFloat(
+                history[lastIndex]?.price
+              ).toFixed(2);
+              const tenMinutesAgoPrice = parseFloat(
+                history[tenMinutesAgoIndex]?.price
+              );
+              const variation =
+                ((currentPrice - tenMinutesAgoPrice) / tenMinutesAgoPrice) *
+                100;
+              const variationFormatted = variation.toFixed(2);
 
-        // Assurez-vous d'avoir assez de données
-        if (lastIndex < 1) {
-          return <div key={name}>{name}: Prix indisponible</div>;
-        }
-
-        // Trouvez l'index approximatif d'il y a 10 minutes
-        // Notez que cela dépend de la fréquence de vos données
-        const tenMinutesAgoIndex = Math.max(lastIndex - 20, 0); // Ajustez ce -10 en fonction de la fréquence de vos données
-        const currentPrice = parseFloat(history[lastIndex]?.price);
-        const tenMinutesAgoPrice = parseFloat(
-          history[tenMinutesAgoIndex]?.price
-        );
-
-        // Calculez le pourcentage de variation
-        const variation =
-          ((currentPrice - tenMinutesAgoPrice) / tenMinutesAgoPrice) * 100;
-
-        // Formattez le pourcentage pour l'affichage
-        const variationFormatted = variation.toFixed(2); // Arrondi à deux décimales
-
-        return (
-          <div key={name}>
-            {name}: {history[lastIndex]?.price || "Prix indisponible"}{" "}
-            <span style={{ color: variation >= 0 ? "green" : "red" }}>
-              ({variationFormatted}%)
-            </span>
-          </div>
-        );
-      })}
-      <br />
-      <div>
-        <h2>Graphique</h2>
-        <CryptoChart />
-      </div>
+              return (
+                <TableRow key={name}>
+                  <TableCell component="th" scope="row">
+                    {name}
+                  </TableCell>
+                  <TableCell align="right">
+                    {currentPrice || "Prix indisponible"}
+                  </TableCell>
+                  <TableCell
+                    align="right"
+                    style={{ color: variation >= 0 ? "green" : "red" }}
+                  >
+                    {variationFormatted}%
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </div>
   );
 }
